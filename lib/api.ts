@@ -1,132 +1,94 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+// lib/api.ts
 
-export interface Prompt {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
+
+export type Prompt = {
   id: number
   name: string
+  description: string | null
   text: string
-  description?: string | null
-  version?: number | null
-  meta?: Record<string, any> | null
-  created_at: string
-  updated_at?: string | null
-  tags: Tag[]
+  tags: { id: number; name: string }[]
+  meta: Record<string, any> | null
+  version: number
   versions: PromptVersion[]
 }
 
-export interface Tag {
-  id: number
-  name: string
-}
-
-export interface PromptVersion {
+export type PromptVersion = {
   id: number
   prompt_id: number
   version: number
   text: string
-  meta?: Record<string, any> | null
+  meta: Record<string, any> | null
   created_at: string
 }
 
-export interface PromptCreate {
+export type PromptCreate = {
   name: string
+  description: string | null
   text: string
-  description?: string | null
-  version?: number | null
-  meta?: Record<string, any> | null
-  tags?: string[] | null
+  tags: string[]
+  meta: Record<string, string> | null
 }
 
-export interface PromptUpdate {
-  name?: string | null
-  text?: string | null
-  description?: string | null
-  version?: number | null
-  meta?: Record<string, any> | null
-  tags?: string[] | null
-}
-
-export interface PlaygroundRequest {
-  prompt_id: number
-  version?: number | null
-  models?: string[]
-  variables?: Record<string, any> | null
-}
-
-export interface PlaygroundResponse {
-  prompt_id: number
-  prompt_name: string
-  prompt_version: number
-  variables_used?: Record<string, any> | null
-  responses: Record<string, string>
+export type PromptUpdate = {
+  name: string
+  description: string | null
+  text: string
+  tags: string[]
+  meta: Record<string, string> | null
 }
 
 export const api = {
-  async getPrompts(params?: {
-    skip?: number
-    limit?: number
-    search?: string
-    tag?: string
-  }): Promise<Prompt[]> {
-    const queryParams = new URLSearchParams()
-    if (params?.skip !== undefined) queryParams.append("skip", params.skip.toString())
-    if (params?.limit !== undefined) queryParams.append("limit", params.limit.toString())
-    if (params?.search) queryParams.append("search", params.search)
-    if (params?.tag) queryParams.append("tag", params.tag)
-
-    const response = await fetch(`${API_BASE_URL}/api/v1/prompts?${queryParams}`)
+  async getPrompts(params?: { search?: string; tag?: string }): Promise<Prompt[]> {
+    const url = new URL(`${API_BASE_URL}/api/v1/prompts`)
+    if (params?.search) {
+      url.searchParams.append("search", params.search)
+    }
+    if (params?.tag) {
+      url.searchParams.append("tag", params.tag)
+    }
+    const response = await fetch(url.toString())
     if (!response.ok) throw new Error("Failed to fetch prompts")
     return response.json()
   },
-
-  async getPrompt(id: number): Promise<Prompt> {
+  async getPrompt(id: string): Promise<Prompt> {
     const response = await fetch(`${API_BASE_URL}/api/v1/prompts/${id}`)
     if (!response.ok) throw new Error("Failed to fetch prompt")
     return response.json()
   },
-
-  async createPrompt(prompt: PromptCreate): Promise<Prompt> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/prompts/`, {
+  async createPrompt(data: PromptCreate): Promise<Prompt> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/prompts`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(prompt),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error("Failed to create prompt")
     return response.json()
   },
-
-  async updatePrompt(id: number, prompt: PromptUpdate): Promise<Prompt> {
+  async updatePrompt(id: string, data: PromptUpdate): Promise<Prompt> {
     const response = await fetch(`${API_BASE_URL}/api/v1/prompts/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(prompt),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error("Failed to update prompt")
     return response.json()
   },
-
-  async deletePrompt(id: number): Promise<void> {
+  async deletePrompt(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/v1/prompts/${id}`, {
       method: "DELETE",
     })
     if (!response.ok) throw new Error("Failed to delete prompt")
   },
-
-  async getPromptVersion(promptId: number, version: number): Promise<PromptVersion> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/prompts/${promptId}/versions/${version}`)
-    if (!response.ok) throw new Error("Failed to fetch prompt version")
+  async getAvailableModels(): Promise<Record<string, any>> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/prompts/models`)
+    if (!response.ok) throw new Error("Failed to fetch available models")
     return response.json()
   },
-
-  async testPlayground(request: PlaygroundRequest): Promise<PlaygroundResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/prompts/playground`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    })
-    if (!response.ok) throw new Error("Failed to test prompt")
-    return response.json()
-  },
-
   async seedDatabase(): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/v1/prompts/seed`, {
       method: "POST",
