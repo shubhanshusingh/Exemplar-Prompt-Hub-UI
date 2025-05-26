@@ -284,7 +284,7 @@ export function PromptPlayground() {
       // Process the model data from the API
       // This assumes the API returns a structure we can transform
       // You may need to adjust this based on the actual API response format
-      Object.entries(data).forEach(([id, details]: [string, any]) => {
+      Object.entries(data.data).forEach(([id, details]: [string, any]) => {
         modelData[id] = {
           id,
           name: details.name || id.split("/").pop() || id,
