@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Copy, MoreVertical, RefreshCw, ExternalLink, DollarSign, FileText, Globe, Zap } from "lucide-react"
+import { Copy, MoreVertical, RefreshCw, ExternalLink, DollarSign, FileText, Globe, Zap, Info, Eye } from "lucide-react"
 import { api, type Prompt, type PlaygroundRequest } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface ModelInfo {
   id: string
@@ -303,9 +305,20 @@ function ModelPanel({
 
         {modelInfo && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">{modelInfo.description}</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="text-sm text-muted-foreground line-clamp-2 cursor-help">
+                    {modelInfo.description}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[300px]">
+                  <p className="text-sm">{modelInfo.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            {/* <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="font-medium">Context</p>
                 <p className="text-muted-foreground">{modelInfo.contextWindow}</p>
@@ -318,7 +331,7 @@ function ModelPanel({
                 <p className="font-medium">Output Pricing</p>
                 <p className="text-muted-foreground">{modelInfo.outputPrice}</p>
               </div>
-            </div>
+            </div> */}
 
             {modelInfo.architecture && (
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -389,6 +402,14 @@ function ModelPanel({
   )
 }
 
+interface PlaygroundResponse {
+  response: string
+}
+
+interface ApiResponse {
+  responses: Record<string, { response: string }>
+}
+
 export function PromptPlayground() {
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [selectedPromptId, setSelectedPromptId] = useState<number | null>(null)
@@ -397,8 +418,8 @@ export function PromptPlayground() {
   const [rightModel, setRightModel] = useState("anthropic/claude-3-opus")
   const [variables, setVariables] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
-  const [responses, setResponses] = useState<Record<string, string>>({})
-  const [syncModels, setSyncModels] = useState(true)
+  const [responses, setResponses] = useState<Record<string, PlaygroundResponse>>({})
+  const [syncModels, setSyncModels] = useState(false)
   const [availableModels, setAvailableModels] = useState<Record<string, ModelInfo>>(FALLBACK_MODEL_INFO)
   const [loadingModels, setLoadingModels] = useState(true)
   const { toast } = useToast()
@@ -412,12 +433,13 @@ export function PromptPlayground() {
     if (selectedPromptId) {
       const prompt = prompts.find((p) => p.id === selectedPromptId)
       if (prompt) {
-        // Extract variables from prompt text
-        const variableMatches = prompt.text.match(/\{\{(\w+)\}\}/g)
-        if (variableMatches) {
-          const vars = variableMatches.map((v) => v.replace(/\{\{|\}\}/g, ""))
+        // Extract variables from prompt text using regex
+        const variableMatches = prompt.text.match(/\{\{([^}]+)\}\}/g)
+        if (prompt.meta && prompt.meta.template_variables) {
+          // const vars = variableMatches.map((v) => v.replace(/\{\{|\}\}/g, ""))
           const newVariables: Record<string, string> = {}
-          vars.forEach((v) => {
+          prompt.meta.template_variables.forEach((v) => {
+            // Preserve existing values if they exist
             newVariables[v] = variables[v] || ""
           })
           setVariables(newVariables)
@@ -518,25 +540,22 @@ export function PromptPlayground() {
     setResponses({})
 
     try {
-      const models = syncModels ? [leftModel] : [leftModel, rightModel]
+      // Always request responses from both models
       const request: PlaygroundRequest = {
         prompt_id: selectedPromptId,
-        version: selectedVersion,
-        models: models,
+        version: selectedVersion || undefined,
+        models: [leftModel, rightModel],
         variables: Object.keys(variables).length > 0 ? variables : undefined,
       }
 
-      const data = await api.testPlayground(request)
+      const response = await api.testPlayground(request)
+      const data = response as unknown as ApiResponse
 
-      if (syncModels) {
-        // If synced, show the same response for both panels
-        setResponses({
-          [leftModel]: data.responses[leftModel]?.response || "",
-          [rightModel]: data.responses[leftModel]?.response || "",
-        })
-      } else {
-        setResponses(data.responses)
-      }
+      // Set responses for both models
+      setResponses({
+        [leftModel]: { response: data.responses[leftModel]?.response || "" },
+        [rightModel]: { response: data.responses[rightModel]?.response || "" },
+      })
     } catch (error) {
       toast({
         title: "Error",
@@ -551,8 +570,8 @@ export function PromptPlayground() {
   const selectedPrompt = prompts.find((p) => p.id === selectedPromptId)
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)]">
-      <Card className="mb-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      <Card className="mb-4 flex-shrink-0">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -560,10 +579,26 @@ export function PromptPlayground() {
               <CardDescription>Select a prompt and configure your test</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="sync" className="text-sm">
-                Sync
-              </Label>
-              <Switch id="sync" checked={syncModels} onCheckedChange={setSyncModels} />
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sync" className="text-sm">
+                  Sync
+                </Label>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="inline-flex">
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="z-50">
+                      <p className="max-w-xs">
+                        When enabled, both panels will use the same input prompt, but each model will generate its own unique response. This allows you to compare how different models handle the same input.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Switch id="sync" checked={syncModels} onCheckedChange={setSyncModels} />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -571,21 +606,63 @@ export function PromptPlayground() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="prompt">Select Prompt</Label>
-              <Select
-                value={selectedPromptId?.toString()}
-                onValueChange={(value) => setSelectedPromptId(Number.parseInt(value))}
-              >
-                <SelectTrigger id="prompt">
-                  <SelectValue placeholder="Choose a prompt" />
-                </SelectTrigger>
-                <SelectContent>
-                  {prompts.map((prompt) => (
-                    <SelectItem key={prompt.id} value={prompt.id.toString()}>
-                      {prompt.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={selectedPromptId?.toString()}
+                  onValueChange={(value) => setSelectedPromptId(Number.parseInt(value))}
+                >
+                  <SelectTrigger id="prompt" className="flex-1">
+                    <SelectValue placeholder="Choose a prompt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {prompts.map((prompt) => (
+                      <SelectItem key={prompt.id} value={prompt.id.toString()}>
+                        {prompt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="icon" disabled={!selectedPrompt}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>{selectedPrompt?.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Prompt Text</h4>
+                        <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg">
+                          {selectedPrompt?.text}
+                        </pre>
+                      </div>
+                      {selectedPrompt?.description && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Description</h4>
+                          <p className="text-sm text-muted-foreground">{selectedPrompt.description}</p>
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Variables</h4>
+                        {Object.keys(variables).length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {Object.keys(variables).map((key) => (
+                              <Badge key={key} variant="secondary">
+                                {`{{${key}}}`}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No variables found in this prompt</p>
+                        )}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
             {selectedPrompt && selectedPrompt.versions.length > 0 && (
@@ -641,12 +718,12 @@ export function PromptPlayground() {
         </CardContent>
       </Card>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
-        <Card className="overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto pb-4">
+        <Card className="overflow-hidden flex flex-col">
           <ModelPanel
             model={leftModel}
             onModelChange={setLeftModel}
-            response={responses[leftModel]}
+            response={responses[leftModel]?.response}
             loading={loading}
             onCopy={() => {}}
             promptText={selectedPrompt?.text}
@@ -655,11 +732,11 @@ export function PromptPlayground() {
           />
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden flex flex-col">
           <ModelPanel
             model={rightModel}
             onModelChange={setRightModel}
-            response={responses[rightModel]}
+            response={responses[rightModel]?.response}
             loading={loading && !syncModels}
             onCopy={() => {}}
             promptText={selectedPrompt?.text}

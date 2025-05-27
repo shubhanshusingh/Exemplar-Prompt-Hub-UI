@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { api, type Prompt, type PromptCreate, type PromptUpdate } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface PromptDialogProps {
   open: boolean
@@ -135,47 +136,54 @@ export function PromptDialog({ open, onOpenChange, prompt, onSuccess }: PromptDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{prompt ? "Edit Prompt" : "Create New Prompt"}</DialogTitle>
-            <DialogDescription>
+      <DialogContent className="sm:max-w-[425px] md:max-w-[600px] lg:max-w-[800px] w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">{prompt ? "Edit Prompt" : "Create New Prompt"}</DialogTitle>
+            <DialogDescription className="text-sm">
               {prompt ? "Update the prompt details below" : "Fill in the details for your new prompt"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm">Name</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                className="w-full text-sm"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-sm">Description</Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Optional description"
+                className="w-full text-sm"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="text">Prompt Text</Label>
+
+            <div className="space-y-2">
+              <Label htmlFor="text" className="text-sm">Prompt Text</Label>
               <Textarea
                 id="text"
                 value={formData.text}
                 onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-                rows={8}
+                rows={6}
                 required
                 placeholder="Enter your prompt text here. You can use {{variables}} for dynamic content."
+                className="w-full text-sm resize-y min-h-[150px] sm:min-h-[200px]"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tags">Tags</Label>
-              <div className="flex gap-2">
+
+            <div className="space-y-2">
+              <Label htmlFor="tags" className="text-sm">Tags</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="tags"
                   value={tagInput}
@@ -187,14 +195,15 @@ export function PromptDialog({ open, onOpenChange, prompt, onSuccess }: PromptDi
                       addTag()
                     }
                   }}
+                  className="w-full text-sm"
                 />
-                <Button type="button" onClick={addTag} variant="secondary">
+                <Button type="button" onClick={addTag} variant="secondary" className="w-full sm:w-auto text-sm">
                   Add
                 </Button>
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 {formData.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
+                  <Badge key={tag} variant="secondary" className="text-xs">
                     {tag}
                     <button type="button" onClick={() => removeTag(tag)} className="ml-1 hover:text-destructive">
                       <X className="h-3 w-3" />
@@ -203,22 +212,23 @@ export function PromptDialog({ open, onOpenChange, prompt, onSuccess }: PromptDi
                 ))}
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="meta">Metadata</Label>
-              <div className="flex gap-2">
+
+            <div className="space-y-2">
+              <Label htmlFor="meta" className="text-sm">Metadata</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="meta-key"
                   value={metaKey}
                   onChange={(e) => setMetaKey(e.target.value)}
                   placeholder="Key"
-                  className="flex-1"
+                  className="w-full text-sm"
                 />
                 <Input
                   id="meta-value"
                   value={metaValue}
                   onChange={(e) => setMetaValue(e.target.value)}
                   placeholder="Value"
-                  className="flex-1"
+                  className="w-full text-sm"
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault()
@@ -226,19 +236,30 @@ export function PromptDialog({ open, onOpenChange, prompt, onSuccess }: PromptDi
                     }
                   }}
                 />
-                <Button type="button" onClick={addMeta} variant="secondary">
+                <Button type="button" onClick={addMeta} variant="secondary" className="w-full sm:w-auto text-sm">
                   Add
                 </Button>
               </div>
               {Object.keys(formData.meta).length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-1.5 mt-2">
                   {Object.entries(formData.meta).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between bg-muted p-2 rounded">
-                      <div className="flex-1">
-                        <span className="font-medium text-sm">{key}:</span>
-                        <span className="ml-2 text-sm">{value}</span>
+                    <div key={key} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <span className="font-medium">{key}:</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="ml-1 text-muted-foreground truncate inline-block max-w-[200px]">
+                                {value}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[300px] break-words">
+                              {value}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
-                      <button type="button" onClick={() => removeMeta(key)} className="ml-2 hover:text-destructive">
+                      <button type="button" onClick={() => removeMeta(key)} className="hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
                     </div>
@@ -247,11 +268,12 @@ export function PromptDialog({ open, onOpenChange, prompt, onSuccess }: PromptDi
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto text-sm">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto text-sm">
               {loading ? "Saving..." : prompt ? "Update" : "Create"}
             </Button>
           </DialogFooter>
