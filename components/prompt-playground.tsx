@@ -211,6 +211,7 @@ interface ModelPanelProps {
   model: string
   onModelChange: (model: string) => void
   response?: string
+  metadata?: any // Or a more specific type if you have one
   loading?: boolean
   onCopy: () => void
   promptText?: string
@@ -222,6 +223,7 @@ function ModelPanel({
   model,
   onModelChange,
   response,
+  metadata,
   loading,
   onCopy,
   promptText,
@@ -240,9 +242,15 @@ function ModelPanel({
 
   const { toast } = useToast()
 
+  // Extract usage if present in response (response is PlaygroundResponse | undefined)
+  let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined = undefined;
+  if (metadata && typeof metadata === 'object' && 'usage' in metadata) {
+    usage = metadata.usage;
+  }
+
   const handleCopy = () => {
     if (response) {
-      navigator.clipboard.writeText(response)
+      navigator.clipboard.writeText(typeof response === 'object' && 'response' in response ? response.response : String(response))
       toast({
         title: "Copied",
         description: "Response copied to clipboard",
@@ -388,11 +396,20 @@ function ModelPanel({
             </div>
           </div>
         ) : response ? (
-          <div className="prose prose-sm max-w-none h-full">
-            <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg h-full overflow-auto">
-              {response}
-            </pre>
-          </div>
+          <>
+            {metadata?.usage && (
+              <div className="flex gap-4 text-xs text-muted-foreground mb-2">
+                <span>Prompt: {metadata.usage.prompt_tokens ?? '-'}</span>
+                <span>Completion: {metadata.usage.completion_tokens ?? '-'}</span>
+                <span>Total: {metadata.usage.total_tokens ?? '-'}</span>
+              </div>
+            )}
+            <div className="prose prose-sm max-w-none h-full">
+              <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg h-full overflow-auto">
+                {typeof response === 'object' && 'response' in response ? response.response : String(response)}
+              </pre>
+            </div>
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <p className="text-sm">Response will appear here</p>
@@ -725,6 +742,7 @@ export function PromptPlayground() {
             model={leftModel}
             onModelChange={setLeftModel}
             response={responses[leftModel]?.response}
+            metadata={responses[leftModel]?.metadata}
             loading={loading}
             onCopy={() => {}}
             promptText={selectedPrompt?.text}
@@ -738,6 +756,7 @@ export function PromptPlayground() {
             model={rightModel}
             onModelChange={setRightModel}
             response={responses[rightModel]?.response}
+            metadata={responses[rightModel]?.metadata}
             loading={loading && !syncModels}
             onCopy={() => {}}
             promptText={selectedPrompt?.text}
