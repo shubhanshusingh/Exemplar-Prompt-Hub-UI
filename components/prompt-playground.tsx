@@ -251,7 +251,7 @@ function ModelPanel({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-auto">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <Select value={model} onValueChange={onModelChange}>
@@ -317,8 +317,7 @@ function ModelPanel({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-            {/* <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="font-medium">Context</p>
                 <p className="text-muted-foreground">{modelInfo.contextWindow}</p>
@@ -331,7 +330,7 @@ function ModelPanel({
                 <p className="font-medium">Output Pricing</p>
                 <p className="text-muted-foreground">{modelInfo.outputPrice}</p>
               </div>
-            </div> */}
+            </div>
 
             {modelInfo.architecture && (
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -389,8 +388,10 @@ function ModelPanel({
             </div>
           </div>
         ) : response ? (
-          <div className="prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg">{response}</pre>
+          <div className="prose prose-sm max-w-none h-full">
+            <pre className="whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg h-full overflow-auto">
+              {response}
+            </pre>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -570,7 +571,7 @@ export function PromptPlayground() {
   const selectedPrompt = prompts.find((p) => p.id === selectedPromptId)
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col min-h-screen w-full overflow-auto">
       <Card className="mb-4 flex-shrink-0">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
@@ -718,7 +719,7 @@ export function PromptPlayground() {
         </CardContent>
       </Card>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 min-h-0">
         <Card className="overflow-hidden flex flex-col">
           <ModelPanel
             model={leftModel}
