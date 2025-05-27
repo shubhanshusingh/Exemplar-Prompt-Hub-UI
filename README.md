@@ -11,6 +11,9 @@ The backend provides a centralized REST API for managing, versioning, and retrie
 For full functionality—including prompt storage, versioning, and multi-model playground—you should run both the backend and this UI together.
 
 ## Features
+![Playground](./public/readme-images/playground.png)
+![Prompt Management](./public/readme-images/prompt%20manager.png)
+
 
 ### Prompt Management
 - **Create and Edit Prompts**: Easily create new prompts with names, descriptions, and tags
