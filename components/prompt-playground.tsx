@@ -11,9 +11,11 @@ import { Copy, MoreVertical, RefreshCw, ExternalLink, DollarSign, FileText, Glob
 import { api, type Prompt, type PlaygroundRequest } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 
 interface ModelInfo {
   id: string
+  hugging_face_id?: string
   name: string
   provider: string
   description: string
@@ -21,6 +23,30 @@ interface ModelInfo {
   inputPrice: string
   outputPrice: string
   icon?: string
+  created?: number
+  context_length?: number
+  architecture?: {
+    modality: string
+    input_modalities: string[]
+    output_modalities: string[]
+    tokenizer: string
+    instruct_type: string | null
+  }
+  pricing?: {
+    prompt: string
+    completion: string
+    request: string
+    image: string
+    web_search: string
+    internal_reasoning: string
+  }
+  top_provider?: {
+    context_length: number
+    max_completion_tokens: number | null
+    is_moderated: boolean
+  }
+  per_request_limits?: any
+  supported_parameters?: string[]
 }
 
 // Fallback model info in case API fails
@@ -33,6 +59,35 @@ const FALLBACK_MODEL_INFO: Record<string, ModelInfo> = {
     contextWindow: "8,192 tokens",
     inputPrice: "$0.03 / 1K tokens",
     outputPrice: "$0.06 / 1K tokens",
+    context_length: 8192,
+    architecture: {
+      modality: "text->text",
+      input_modalities: ["text"],
+      output_modalities: ["text"],
+      tokenizer: "GPT",
+      instruct_type: "chat"
+    },
+    pricing: {
+      prompt: "0.03",
+      completion: "0.06",
+      request: "0",
+      image: "0",
+      web_search: "0",
+      internal_reasoning: "0"
+    },
+    top_provider: {
+      context_length: 8192,
+      max_completion_tokens: null,
+      is_moderated: true
+    },
+    supported_parameters: [
+      "max_tokens",
+      "temperature",
+      "top_p",
+      "stop",
+      "frequency_penalty",
+      "presence_penalty"
+    ]
   },
   "openai/gpt-3.5-turbo": {
     id: "openai/gpt-3.5-turbo",
@@ -42,6 +97,35 @@ const FALLBACK_MODEL_INFO: Record<string, ModelInfo> = {
     contextWindow: "16,385 tokens",
     inputPrice: "$0.0005 / 1K tokens",
     outputPrice: "$0.0015 / 1K tokens",
+    context_length: 16385,
+    architecture: {
+      modality: "text->text",
+      input_modalities: ["text"],
+      output_modalities: ["text"],
+      tokenizer: "GPT",
+      instruct_type: "chat"
+    },
+    pricing: {
+      prompt: "0.0005",
+      completion: "0.0015",
+      request: "0",
+      image: "0",
+      web_search: "0",
+      internal_reasoning: "0"
+    },
+    top_provider: {
+      context_length: 16385,
+      max_completion_tokens: null,
+      is_moderated: true
+    },
+    supported_parameters: [
+      "max_tokens",
+      "temperature",
+      "top_p",
+      "stop",
+      "frequency_penalty",
+      "presence_penalty"
+    ]
   },
   "anthropic/claude-3-opus": {
     id: "anthropic/claude-3-opus",
@@ -51,6 +135,35 @@ const FALLBACK_MODEL_INFO: Record<string, ModelInfo> = {
     contextWindow: "200,000 tokens",
     inputPrice: "$0.015 / 1K tokens",
     outputPrice: "$0.075 / 1K tokens",
+    context_length: 200000,
+    architecture: {
+      modality: "text->text",
+      input_modalities: ["text"],
+      output_modalities: ["text"],
+      tokenizer: "Claude",
+      instruct_type: "chat"
+    },
+    pricing: {
+      prompt: "0.015",
+      completion: "0.075",
+      request: "0",
+      image: "0",
+      web_search: "0",
+      internal_reasoning: "0"
+    },
+    top_provider: {
+      context_length: 200000,
+      max_completion_tokens: null,
+      is_moderated: true
+    },
+    supported_parameters: [
+      "max_tokens",
+      "temperature",
+      "top_p",
+      "stop",
+      "frequency_penalty",
+      "presence_penalty"
+    ]
   },
   "anthropic/claude-3-sonnet": {
     id: "anthropic/claude-3-sonnet",
@@ -60,7 +173,36 @@ const FALLBACK_MODEL_INFO: Record<string, ModelInfo> = {
     contextWindow: "200,000 tokens",
     inputPrice: "$0.003 / 1K tokens",
     outputPrice: "$0.015 / 1K tokens",
-  },
+    context_length: 200000,
+    architecture: {
+      modality: "text->text",
+      input_modalities: ["text"],
+      output_modalities: ["text"],
+      tokenizer: "Claude",
+      instruct_type: "chat"
+    },
+    pricing: {
+      prompt: "0.003",
+      completion: "0.015",
+      request: "0",
+      image: "0",
+      web_search: "0",
+      internal_reasoning: "0"
+    },
+    top_provider: {
+      context_length: 200000,
+      max_completion_tokens: null,
+      is_moderated: true
+    },
+    supported_parameters: [
+      "max_tokens",
+      "temperature",
+      "top_p",
+      "stop",
+      "frequency_penalty",
+      "presence_penalty"
+    ]
+  }
 }
 
 interface ModelPanelProps {
@@ -86,8 +228,8 @@ function ModelPanel({
 }: ModelPanelProps) {
   const modelInfo = availableModels[model] || {
     id: model,
-    name: model.split("/").pop() || model,
-    provider: model.split("/")[0] || "Unknown",
+    name: model,
+    provider: model || "Unknown",
     description: "No description available",
     contextWindow: "Unknown",
     inputPrice: "Varies",
@@ -124,7 +266,7 @@ function ModelPanel({
                 <SelectItem key={key} value={key}>
                   <div className="flex items-center gap-2">
                     <span>
-                      {info.provider} / {info.name}
+                      {info.id}
                     </span>
                   </div>
                 </SelectItem>
@@ -177,6 +319,32 @@ function ModelPanel({
                 <p className="text-muted-foreground">{modelInfo.outputPrice}</p>
               </div>
             </div>
+
+            {modelInfo.architecture && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="font-medium">Modality</p>
+                  <p className="text-muted-foreground">{modelInfo.architecture.modality}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Tokenizer</p>
+                  <p className="text-muted-foreground">{modelInfo.architecture.tokenizer}</p>
+                </div>
+              </div>
+            )}
+
+            {modelInfo.supported_parameters && modelInfo.supported_parameters.length > 0 && (
+              <div className="text-sm">
+                <p className="font-medium mb-2">Supported Parameters</p>
+                <div className="flex flex-wrap gap-2">
+                  {modelInfo.supported_parameters.map((param) => (
+                    <Badge key={param} variant="secondary" className="text-xs">
+                      {param}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-4 text-sm">
               <a href="#" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
@@ -282,17 +450,23 @@ export function PromptPlayground() {
       const modelData: Record<string, ModelInfo> = {}
 
       // Process the model data from the API
-      // This assumes the API returns a structure we can transform
-      // You may need to adjust this based on the actual API response format
-      Object.entries(data.data).forEach(([id, details]: [string, any]) => {
-        modelData[id] = {
-          id,
-          name: details.name || id.split("/").pop() || id,
-          provider: details.provider || id.split("/")[0] || "Unknown",
+      Object.entries(data.data.slice(0, 10)).forEach(([id, details]: [string, any]) => {
+        modelData[details.id] = {
+          id: details.id,
+          hugging_face_id: details.hugging_face_id,
+          name: details.name  || id,
+          provider: details.provider || "Unknown",
           description: details.description || "No description available",
-          contextWindow: details.context_window || "Unknown",
-          inputPrice: details.input_price || "Varies",
-          outputPrice: details.output_price || "Varies",
+          contextWindow: `${details.context_length?.toLocaleString() || "Unknown"} tokens`,
+          inputPrice: details.pricing?.prompt ? `$${details.pricing.prompt} / 1K tokens` : "Varies",
+          outputPrice: details.pricing?.completion ? `$${details.pricing.completion} / 1K tokens` : "Varies",
+          created: details.created,
+          context_length: details.context_length,
+          architecture: details.architecture,
+          pricing: details.pricing,
+          top_provider: details.top_provider,
+          per_request_limits: details.per_request_limits,
+          supported_parameters: details.supported_parameters
         }
       })
 
@@ -357,8 +531,8 @@ export function PromptPlayground() {
       if (syncModels) {
         // If synced, show the same response for both panels
         setResponses({
-          [leftModel]: data.responses[leftModel],
-          [rightModel]: data.responses[leftModel],
+          [leftModel]: data.responses[leftModel]?.response || "",
+          [rightModel]: data.responses[leftModel]?.response || "",
         })
       } else {
         setResponses(data.responses)
