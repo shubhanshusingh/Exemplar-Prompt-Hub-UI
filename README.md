@@ -1,13 +1,14 @@
 # Prompt management UI
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/shubhanshusinghs-projects/v0-prompt-management-ui)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/6oaobrbkh7w)
-
 ## Overview
 
-Exemplar Prompt Hub is a comprehensive prompt management system that helps you organize, version, and test your AI prompts. This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev). Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+Exemplar Prompt Hub is a comprehensive prompt management system that helps you organize, version, and test your AI prompts.
+
+## Backend Integration
+
+This UI is designed to be used in conjunction with the [exemplar-prompt-hub](https://github.com/shubhanshusingh/exemplar-prompt-hub/) backend service.  
+The backend provides a centralized REST API for managing, versioning, and retrieving AI prompts.  
+For full functionality—including prompt storage, versioning, and multi-model playground—you should run both the backend and this UI together.
 
 ## Features
 
@@ -54,6 +55,23 @@ This project is built using modern web technologies:
 └── hooks/             # Custom React hooks
 ```
 
+## Running the Backend API
+
+To use this UI, you must also run the [exemplar-prompt-hub](https://github.com/shubhanshusingh/exemplar-prompt-hub/) backend service.  
+Follow the instructions in the backend repository to set up and start the API service.  
+Typically, you can get started with:
+
+```bash
+git clone https://github.com/shubhanshusingh/exemplar-prompt-hub.git
+cd exemplar-prompt-hub
+cp .env.example .env
+# Edit .env as needed
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Make sure the backend API is running and accessible at the endpoint you configure in your `.env` file for this UI.
+
 ## Getting Started
 
 1. Clone the repository
@@ -65,7 +83,12 @@ This project is built using modern web technologies:
    # or
    pnpm install
    ```
-3. Run the development server:
+3. **Copy the example environment file and configure it:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file to set the correct API endpoint for your exemplar-prompt-hub backend service.
+4. Run the development server:
    ```bash
    npm run dev
    # or
@@ -73,26 +96,8 @@ This project is built using modern web technologies:
    # or
    pnpm dev
    ```
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/shubhanshusinghs-projects/v0-prompt-management-ui](https://vercel.com/shubhanshusinghs-projects/v0-prompt-management-ui)**
-
-## Development
-
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/6oaobrbkh7w](https://v0.dev/chat/projects/6oaobrbkh7w)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
 
 ## Available Scripts
 
